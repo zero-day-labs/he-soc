@@ -870,7 +870,7 @@ module ariane_peripherals
         .InclDBG			  ( 1'b1						            ),
 
         .IGS            ( rv_iommu::BOTH              ),
-        .N_INT_VEC      ( ariane_soc::IOMMUNumWires   ),
+        .N_INT_VEC      ( 4                           ),
         .N_IOHPMCTR     ( 6                           ),
 
         .ADDR_WIDTH			( AxiAddrWidth				        ),
@@ -947,6 +947,6 @@ module ariane_peripherals
       assign iommu_ds_cut.ar_valid  = 1'b0;
       assign iommu_ds_cut.r_ready   = 1'b0;
 
-      assign irq_sources[(ariane_soc::IOMMUNumWires-1)+150:150] = '0;
+      assign irq_sources[153:150]   = '0;
     end
 endmodule
