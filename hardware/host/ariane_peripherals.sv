@@ -24,7 +24,6 @@ module ariane_peripherals
     parameter  bit InclEthernet = 1,
     parameter  bit InclGPIO     = 0,
     parameter  bit InclTimer    = 1,
-    parameter  bit InclTimer    = 1,
     parameter  bit InclDMA      = 1,
     parameter  bit InclIOPMP    = 1
 ) (
@@ -650,8 +649,8 @@ module ariane_peripherals
     // ---------------
 
     // AXI Bus: iDMA Master <=> IOPMP Receiver Port
-    ariane_axi_soc::req_ext_t   axi_iopmp_rp_req;
-    ariane_axi_soc::resp_t      axi_iopmp_rp_rsp;
+    ariane_axi_soc::req_ext_t   axi_iopmp_recv_req;
+    ariane_axi_soc::resp_t      axi_iopmp_recv_rsp;
 
     // AXI Bus: AXI Cut <=> iDMA Programming Interface
     AXI_BUS #(
@@ -680,7 +679,7 @@ module ariane_peripherals
     .AXI_DATA_WIDTH ( AxiDataWidth             ),
     .AXI_ID_WIDTH   ( ariane_soc::IdWidthSlave ),
     .AXI_USER_WIDTH ( AxiUserWidth             )
-    ) iopmp_cp_cut ();
+    ) iopmp_cfg_cut ();
 
     // AXI Cut for IOPMP Configuration Port
     axi_cut_intf #(
@@ -691,15 +690,15 @@ module ariane_peripherals
     ) axi_iopmp_cp_cut(
       .clk_i  ( clk_i   ),
       .rst_ni ( rst_ni  ),
-      .in     ( iopmp_cp ),
-      .out    ( iopmp_cp_cut )
+      .in     ( iopmp_cfg ),
+      .out    ( iopmp_cfg_cut )
     );
 
     // AXI Bus: AXI Cut <=> IOPMP Configuration Port
-    ariane_axi_soc::req_slv_t  axi_iopmp_cp_req;
-    ariane_axi_soc::resp_slv_t axi_iopmp_cp_rsp;
-    `AXI_ASSIGN_TO_REQ(axi_iopmp_cp_req, iopmp_cp_cut)
-    `AXI_ASSIGN_FROM_RESP(iopmp_cp_cut, axi_iopmp_cp_rsp)
+    ariane_axi_soc::req_slv_t  axi_iopmp_cfg_req;
+    ariane_axi_soc::resp_slv_t axi_iopmp_cfg_rsp;
+    `AXI_ASSIGN_TO_REQ(axi_iopmp_cfg_req, iopmp_cfg_cut)
+    `AXI_ASSIGN_FROM_RESP(iopmp_cfg_cut, axi_iopmp_cfg_rsp)
 
     // AXI Bus: IOPMP Initiator Port <=> AXI Cut
     AXI_BUS #(
@@ -707,7 +706,7 @@ module ariane_peripherals
       .AXI_DATA_WIDTH ( AxiDataWidth        ),
       .AXI_ID_WIDTH   ( ariane_soc::IdWidth ),
       .AXI_USER_WIDTH ( AxiUserWidth        )
-    ) iopmp_ip_cut ();
+    ) iopmp_init_cut ();
 
     // AXI Cut for IOPMP Initiator Port
     axi_cut_intf #(
@@ -715,11 +714,11 @@ module ariane_peripherals
       .DATA_WIDTH ( AxiDataWidth   ),
       .ID_WIDTH   ( ariane_soc::IdWidth ),
       .USER_WIDTH ( AxiUserWidth   )
-    ) axi_iopmp_ip_master_cut(
+    ) axi_iopmp_init_master_cut(
       .clk_i  ( clk_i   ),
       .rst_ni ( rst_ni  ),
-      .in     ( iopmp_ip_cut ),
-      .out    ( iopmp_ip )
+      .in     ( iopmp_init_cut ),
+      .out    ( iopmp_init )
     );
 
     // -----------
@@ -736,20 +735,20 @@ module ariane_peripherals
       ) axi_idma_master ();
 
       // Conversion from SV interface to req/resp structs
-      `AXI_ASSIGN_TO_REQ(axi_iopmp_rp_req, axi_idma_master)
-      `AXI_ASSIGN_FROM_RESP(axi_idma_master, axi_iopmp_rp_rsp)
+      `AXI_ASSIGN_TO_REQ(axi_iopmp_recv_req, axi_idma_master)
+      `AXI_ASSIGN_FROM_RESP(axi_idma_master, axi_iopmp_recv_rsp)
 
       // Manually assign extended signals
       // AW
-      assign axi_iopmp_rp_req.aw.stream_id    = axi_idma_master.aw_stream_id;
-      assign axi_iopmp_rp_req.aw.ss_id_valid  = axi_idma_master.aw_ss_id_valid;
-      assign axi_iopmp_rp_req.aw.substream_id = axi_idma_master.aw_substream_id;
-      assign axi_iopmp_rp_req.aw.nsaid        = axi_idma_master.aw_nsaid;
+      assign axi_iopmp_recv_req.aw.stream_id    = axi_idma_master.aw_stream_id;
+      assign axi_iopmp_recv_req.aw.ss_id_valid  = axi_idma_master.aw_ss_id_valid;
+      assign axi_iopmp_recv_req.aw.substream_id = axi_idma_master.aw_substream_id;
+      assign axi_iopmp_recv_req.aw.nsaid        = axi_idma_master.aw_nsaid;
       // AR
-      assign axi_iopmp_rp_req.ar.stream_id    = axi_idma_master.ar_stream_id;
-      assign axi_iopmp_rp_req.ar.ss_id_valid  = axi_idma_master.ar_ss_id_valid;
-      assign axi_iopmp_rp_req.ar.substream_id = axi_idma_master.ar_substream_id;
-      assign axi_iopmp_rp_req.ar.nsaid        = axi_idma_master.ar_nsaid;
+      assign axi_iopmp_recv_req.ar.stream_id    = axi_idma_master.ar_stream_id;
+      assign axi_iopmp_recv_req.ar.ss_id_valid  = axi_idma_master.ar_ss_id_valid;
+      assign axi_iopmp_recv_req.ar.substream_id = axi_idma_master.ar_substream_id;
+      assign axi_iopmp_recv_req.ar.nsaid        = axi_idma_master.ar_nsaid;
 
       // iDMA
       dma_core_wrap_intf #(
@@ -807,11 +806,11 @@ module ariane_peripherals
       );
 
 	    // Set Receiver Port request wires to a known state
-	    assign axi_iopmp_rp_req.ar_valid    = 1'b0;
-      assign axi_iopmp_rp_req.aw_valid    = 1'b0;
-      assign axi_iopmp_rp_req.w_valid     = 1'b0;
-      assign axi_iopmp_rp_req.b_ready     = 1'b0;
-      assign axi_iopmp_rp_req.r_ready     = 1'b0;
+	    assign axi_iopmp_recv_req.ar_valid    = 1'b0;
+      assign axi_iopmp_recv_req.aw_valid    = 1'b0;
+      assign axi_iopmp_recv_req.w_valid     = 1'b0;
+      assign axi_iopmp_recv_req.b_ready     = 1'b0;
+      assign axi_iopmp_recv_req.r_ready     = 1'b0;
     end
 
     // -------------------------------------------
@@ -825,10 +824,10 @@ module ariane_peripherals
         In the future, an IOPMP will be capable to configure subsequent transactions to IOPMPs downstream (cascade)
         To support this feature, the request port of the IOPMP Receiver Port integrates the NSAIDs
       */
-      ariane_axi_soc::req_nsaid_t axi_iopmp_ip_req;
-      ariane_axi_soc::resp_t      axi_iopmp_ip_rsp;
-      `AXI_ASSIGN_FROM_REQ(iopmp_ip_cut, axi_iopmp_ip_req)
-      `AXI_ASSIGN_TO_RESP(axi_iopmp_ip_rsp, iopmp_ip_cut)
+      ariane_axi_soc::req_ext_t   axi_iopmp_init_req;
+      ariane_axi_soc::resp_t      axi_iopmp_init_rsp;
+      `AXI_ASSIGN_FROM_REQ(iopmp_init_cut, axi_iopmp_init_req)
+      `AXI_ASSIGN_TO_RESP(axi_iopmp_init_rsp, iopmp_init_cut)
 
       // Memory-mapped Register IF types
       // name, addr_t, data_t, strb_t
@@ -843,6 +842,7 @@ module ariane_peripherals
 
         // AXI request/response
         .axi_req_nsaid_t        ( ariane_axi_soc::req_ext_t   ),
+        .axi_req_t			        ( ariane_axi_soc::req_t	      ),
         .axi_rsp_t			        ( ariane_axi_soc::resp_t	    ),
         .axi_req_slv_t		      ( ariane_axi_soc::req_slv_t	  ),
         .axi_rsp_slv_t		      ( ariane_axi_soc::resp_slv_t  ),
@@ -860,19 +860,18 @@ module ariane_peripherals
         // Implementation specific
         .NUMBER_MDS             ( 16 ),
         .NUMBER_ENTRIES         ( 32 ),
-        .NUMBER_MASTERS         ( 1  ),
-        .NUMBER_ENTRY_ANALYZERS ( 8  )
+        .NUMBER_MASTERS         ( 1  )
     ) i_riscv_iopmp (
         .clk_i				      ( clk_i						  ),
         .rst_ni				      ( rst_ni					  ),
 
         // AXI Config Slave port
-        .control_req_i      ( axi_iopmp_cp_req  ),
-        .control_rsp_o      ( axi_iopmp_cp_rsp  ),
+        .control_req_i      ( axi_iopmp_cfg_req  ),
+        .control_rsp_o      ( axi_iopmp_cfg_rsp  ),
 
         // AXI Bus Slave port
-        .receiver_req_i     ( axi_iopmp_rp_req  ),
-        .receiver_rsp_o     ( axi_iopmp_rp_rsp  ),
+        .receiver_req_i     ( axi_iopmp_recv_req  ),
+        .receiver_rsp_o     ( axi_iopmp_recv_rsp  ),
 
         // AXI Bus Master port
         .initiator_req_o    ( axi_iopmp_ip_req  ),
@@ -898,14 +897,14 @@ module ariane_peripherals
           .clk_i        ( clk_i             ),
           .rst_ni       ( rst_ni            ),
           .test_i       ( 1'b0              ),
-          .slv_req_i    ( axi_iopmp_cp_req  ),
-          .slv_resp_o   ( axi_iopmp_cp_rsp  )
+          .slv_req_i    ( axi_iopmp_cfg_req  ),
+          .slv_resp_o   ( axi_iopmp_cfg_rsp  )
       );
 
       // Connect directly the device to the System Interconnect
       // iDMA Master IF <=> IOPMP Initiator Port AXI Cut
-      `AXI_ASSIGN_FROM_REQ(iopmp_ip_cut, axi_iopmp_rp_req)
-      `AXI_ASSIGN_TO_RESP(axi_iopmp_rp_rsp, iopmp_ip_cut)
+      `AXI_ASSIGN_FROM_REQ(iopmp_init_cut, axi_iopmp_recv_req)
+      `AXI_ASSIGN_TO_RESP(axi_iopmp_recv_rsp, iopmp_init_cut)
 
       assign irq_sources[150] = '0;
     end
